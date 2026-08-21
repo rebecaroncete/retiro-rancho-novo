@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="pt-BR" translate="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="google" content="notranslate">
+  <meta name="theme-color" content="#2E7D32">
+  <title>Estadia Retiro Rancho Novo</title>
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <style>
+    :root {
+      --verde-principal: #2E7D32;
+      --verde-claro: #E8F5E9;
+      --bege: #F5F5DC;
+      --branco: #FFFFFF;
+      --texto: #333333;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bege);
+      color: var(--texto);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
+    .container {
+      background-color: var(--branco);
+      max-width: 600px;
+      width: 100%;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      padding: 30px;
+      text-align: center;
+    }
+    h1 { color: var(--verde-principal); margin-bottom: 5px; }
+    h3 { color: #555; margin-top: 0;}
+    .aviso {
+      background-color: var(--verde-claro);
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 0.9em;
+      margin-bottom: 20px;
+      border-left: 4px solid var(--verde-principal);
+    }
+    .erro-msg {
+      background-color: #FFEBEE;
+      color: #D32F2F;
+      padding: 10px;
+      border-radius: 8px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      border-left: 4px solid #D32F2F;
+      display: none;
+    }
+    input[type="text"], input[type="tel"], input[type="number"] {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0 20px 0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box;
+      font-size: 16px;
+    }
+    .checkbox-container {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      margin-bottom: 20px;
+      text-align: left;
+      background: var(--bege);
+      padding: 10px;
+      border-radius: 6px;
+    }
+    .checkbox-container input { margin-right: 10px; width: 20px; height: 20px; }
+    button {
+      background-color: var(--verde-principal);
+      color: white;
+      border: none;
+      padding: 15px 20px;
+      width: 100%;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-bottom: 10px;
+      transition: background-color 0.3s;
+    }
+    button:hover { background-color: #1B5E20; }
+    button:disabled { background-color: #888; cursor: not-allowed; }
+    .btn-secundario { background-color: transparent; color: var(--verde-principal); border: 2px solid var(--verde-principal); padding: 10px 15px;}
+    .btn-secundario:hover { background-color: var(--verde-claro); }
+    .tela { display: none; }
+    .tela.ativa { display: block; }
+    .loading { color: var(--verde-principal); font-weight: bold; margin: 20px 0; }
+    .grid-calendario {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 5px;
+      margin-top: 15px;
+      margin-bottom: 20px;
+    }
+    .dia-cabecalho { font-weight: bold; font-size: 12px; color: #555; padding-bottom: 5px; }
+    .dia-caixa {
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 8px 2px;
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 55px;
+      transition: 0.2s;
+    }
+    .dia-caixa.livre:hover { background-color: var(--verde-claro); }
+    .preco-texto { font-size: 10px; color: var(--verde-principal); font-weight: bold; margin-top: 4px; text-align: center;}
+    .caixa-visita {
+      background-color: #FFF3E0;
+      border-left: 4px solid #FF9800;
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 0.9em;
+      text-align: left;
+      margin-top: 20px;
+      display: none;
+    }
+    .caixa-visita a { color: #E65100; font-weight: bold; }
+    .offline-msg {
+      background-color: #FFF3E0;
+      color: #E65100;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 0.85em;
+      margin-bottom: 15px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Estadia Retiro Rancho Novo</h1>
+    <div id="avisoOffline" class="offline-msg">Você está sem conexão com a internet no momento. Conecte-se para consultar disponibilidade e preços.</div>
+
+    <div id="tela1" class="tela ativa">
+      <p>Preencha os dados abaixo para simular seu orçamento.</p>
+      <div class="aviso"><strong>Atenção:</strong> Nosso sítio comporta grupos de 10 a 150 pessoas (incluindo crianças).</div>
+      <div id="mensagemErroTela1" class="erro-msg"></div>
+
+      <div style="text-align: left;">
+        <label>Nome Completo:</label>
+        <input type="text" id="nome" placeholder="Digite seu nome">
+
+        <label>WhatsApp:</label>
+        <input type="tel" id="whatsapp" placeholder="(27) 9XXXX-XXXX" oninput="mascaraWhatsApp(this)" onchange="mascaraWhatsApp(this)" onblur="mascaraWhatsApp(this)">
+
+        <label>Quantidade de Adultos (Mín. 1):</label>
+        <input type="number" id="adultos" placeholder="Ex: 25" min="1">
+
+        <label>Crianças menores de 5 anos (Opcional):</label>
+        <input type="number" id="criancas" placeholder="Ex: 0" min="0">
+      </div>
+
+      <div class="checkbox-container">
+        <input type="checkbox" id="passarDia" onchange="mostrarHorarios()">
+        <label for="passarDia">É apenas para passar o dia (sem pernoite)?</label>
+      </div>
+
+      <div id="avisoHorario" class="aviso" style="display: none;"><strong>Horário:</strong> Check-in às 08h e Check-out às 20h. (Indisponível em feriados)</div>
+      <div id="avisoPernoite" class="aviso"><strong>Horário Padrão:</strong> Check-in às 17h e Check-out às 17h. Mínimo de 2 diárias aos finais de semana.</div>
+
+      <button id="btnAvancar" onclick="irParaCalendario()">Ver Calendário e Preços</button>
+    </div>
+
+    <div id="tela2" class="tela">
+      <h3>Selecione as Datas</h3>
+      <div id="mensagemCarregando" class="loading">Buscando disponibilidade e calculando preços...</div>
+
+      <div id="areaCalendario" style="display: none;">
+         <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bege); padding: 10px; border-radius: 8px;">
+           <button class="btn-secundario" style="width: auto; margin: 0;" onclick="mudarMes(-1)">❮ Voltar</button>
+           <h3 id="mesAnoDisplay" style="margin: 0; color: var(--verde-principal);">Mês Ano</h3>
+           <button class="btn-secundario" style="width: auto; margin: 0;" onclick="mudarMes(1)">Avançar ❯</button>
+         </div>
+         <div id="gridDias" class="grid-calendario"></div>
+         <div id="avisoSelecao" class="aviso" style="background-color: #E3F2FD; border-left-color: #1976D2; color: #1565C0;">
+           Clique em uma data para iniciar a seleção.
+         </div>
+         <button id="btnCalcularOrcamento" onclick="calcularTotalFinal()" disabled>Selecione as datas para calcular</button>
+         <button class="btn-secundario" onclick="voltarInicio()" style="border-color: #999; color: #555;">Voltar para o início</button>
+      </div>
+    </div>
+
+    <div id="tela3" class="tela">
+      <h3>Orçamento Gerado</h3>
+      <h1 id="valorTotal">R$ 0,00</h1>
+      <p id="avisoEstimativa" style="color: #D32F2F; font-size: 1.1em; font-weight: bold; margin-top: -10px;">Essa é uma estimativa de seu orçamento, necessário confirmar com o gerente Afonso.</p>
+
+      <p id="resumoReserva"></p>
+      <p id="avisoExtraResumo" style="color: #D32F2F; font-size: 0.9em; font-weight: bold; display: none;"></p>
+      <br>
+      <button onclick="enviarWhatsAppReserva()">Falar com Afonso (Reservar)</button>
+      <button class="btn-secundario" onclick="mostrarMensagemVisita()">Agendar uma Visita</button>
+      <button class="btn-secundario" style="border-color: #999; color: #555;" onclick="voltarInicio()">Consultar outra data</button>
+
+      <div id="caixaVisita" class="caixa-visita">
+        <p>O horário padrão de visitação é de segunda a quinta-feira, das 7h às 16h. Você pode chegar em nosso sítio dentro desse horário e procurar diretamente pela funcionária Joelma. Ela mostrará o sítio para você. Caso não encontre nenhum funcionário, ligue para o gerente Afonso no número <strong>(27) 99921-8056</strong>.</p>
+        <p>A localização do sítio é: <br><a href="https://maps.app.goo.gl/tsFFK4V2v5MDi2zp6" target="_blank">Abrir Localização no Google Maps</a></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script>
+    var dadosCliente = {};
+    var mesAtual = new Date().getMonth();
+    var anoAtual = new Date().getFullYear();
+    var diaInicio = null;
+    var diaFim = null;
+    var valorTotalSelecionado = 0;
+    var avisoFimDeSemanaAtivado = false;
+    var feriadoEspecialSelecionado = null;
+
+    // --------------------------------------------------------------
+    // Camada de comunicação com o backend (Apps Script), substituindo
+    // o antigo google.script.run por fetch() comum.
+    // --------------------------------------------------------------
+    function apiGet(action, params) {
+      var url = API_URL + "?action=" + encodeURIComponent(action);
+      for (var k in (params || {})) {
+        url += "&" + encodeURIComponent(k) + "=" + encodeURIComponent(params[k]);
+      }
+      return fetch(url).then(function(r) { return r.json(); });
+    }
+
+    function apiPost(action, payload) {
+      payload = payload || {};
+      payload.action = action;
+      return fetch(API_URL, {
+        method: "POST",
+        // text/plain evita "preflight" (OPTIONS), que o Apps Script não trata bem.
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      }).then(function(r) { return r.json(); });
+    }
+
+    if (!navigator.onLine) {
+      document.getElementById('avisoOffline').style.display = 'block';
+    }
+    window.addEventListener('online', function() { document.getElementById('avisoOffline').style.display = 'none'; });
+    window.addEventListener('offline', function() { document.getElementById('avisoOffline').style.display = 'block'; });
+
+    function mascaraWhatsApp(input) {
+      var v = input.value.replace(/\D/g, '');
+      if (v.length > 11) v = v.slice(0, 11);
+      if (v.length > 2) v = '(' + v.substring(0, 2) + ') ' + v.substring(2);
+      if (v.length > 10) v = v.substring(0, 10) + '-' + v.substring(10);
+      input.value = v;
+    }
+
+    function mostrarHorarios() {
+      var passarDia = document.getElementById('passarDia').checked;
+      document.getElementById('avisoHorario').style.display = passarDia ? 'block' : 'none';
+      document.getElementById('avisoPernoite').style.display = passarDia ? 'none' : 'block';
+    }
+
+    function mostrarErro(idCaixa, mensagem) {
+      var caixa = document.getElementById(idCaixa);
+      caixa.innerText = mensagem;
+      caixa.style.display = 'block';
+    }
+
+    function irParaCalendario() {
+      document.getElementById('mensagemErroTela1').style.display = 'none';
+      var btn = document.getElementById('btnAvancar');
+      var campoZap = document.getElementById('whatsapp');
+      mascaraWhatsApp(campoZap);
+
+      try {
+        dadosCliente.nome = document.getElementById('nome').value.trim();
+        dadosCliente.whatsapp = campoZap.value;
+
+        var qtdAdultos = parseInt(document.getElementById('adultos').value, 10);
+        var qtdCriancas = parseInt(document.getElementById('criancas').value, 10) || 0;
+
+        dadosCliente.passarDia = document.getElementById('passarDia').checked;
+
+        if(!dadosCliente.nome || !dadosCliente.whatsapp || isNaN(qtdAdultos)) {
+          mostrarErro('mensagemErroTela1', "Preencha Nome, WhatsApp e a quantidade de Adultos."); return;
+        }
+        if(dadosCliente.whatsapp.length < 14) {
+          mostrarErro('mensagemErroTela1', "Por favor, informe o WhatsApp completo."); return;
+        }
+        if(qtdAdultos < 1) {
+          mostrarErro('mensagemErroTela1', "É necessário pelo menos 1 adulto na reserva."); return;
+        }
+
+        dadosCliente.pessoas = qtdAdultos + qtdCriancas;
+
+        if(dadosCliente.pessoas > 150) {
+          mostrarErro('mensagemErroTela1', "Lotação excedida! O total não pode passar de 150."); return;
+        }
+
+        btn.innerText = "A carregar...";
+        btn.disabled = true;
+
+        document.getElementById('tela1').classList.remove('ativa');
+        document.getElementById('tela2').classList.add('ativa');
+        diaInicio = null; diaFim = null; feriadoEspecialSelecionado = null;
+        document.getElementById('btnCalcularOrcamento').disabled = true;
+
+        apiPost('salvarContatoInicial', {
+          nome: dadosCliente.nome,
+          whatsapp: dadosCliente.whatsapp,
+          qtdPessoas: dadosCliente.pessoas,
+          passarOdia: dadosCliente.passarDia ? "Sim" : "Não"
+        }).then(function(resp) {
+          if (resp.ok) dadosCliente.linhaPlanilha = resp.linha;
+        });
+
+        apiGet('buscarDadosCalendario', { pessoas: dadosCliente.pessoas })
+          .then(function(resp) {
+            if (resp.ok) {
+              prepararCalendario(resp.data);
+            } else {
+              alert("Erro ao ler calendário: " + resp.erro);
+            }
+          })
+          .catch(function(erro) {
+            alert("Erro ao ler calendário: " + erro.message);
+          });
+
+      } catch (erro) { alert(erro.message); }
+    }
+
+    function prepararCalendario(dadosBackend) {
+      document.getElementById('mensagemCarregando').style.display = 'none';
+      document.getElementById('areaCalendario').style.display = 'block';
+
+      dadosCliente.precosTabela = dadosBackend.precos;
+      dadosCliente.feriados = dadosBackend.feriados || [];
+      dadosCliente.feriadosEspeciais = dadosBackend.especiais || [];
+      dadosCliente.datasOcupadas = dadosBackend.ocupadas || [];
+
+      document.getElementById('btnAvancar').innerText = "Ver Calendário e Preços";
+      document.getElementById('btnAvancar').disabled = false;
+      atualizaAvisoSelecao("Clique na data de Entrada (Check-in).");
+      renderizarCalendario();
+    }
+
+    function mudarMes(direcao) {
+      var dataHoj = new Date();
+      var mesHoj = dataHoj.getMonth();
+      var anoHoj = dataHoj.getFullYear();
+
+      var novoMes = mesAtual + direcao;
+      var novoAno = anoAtual;
+
+      if(novoMes < 0) { novoMes = 11; novoAno--; }
+      if(novoMes > 11) { novoMes = 0; novoAno++; }
+
+      if (novoAno < anoHoj || (novoAno === anoHoj && novoMes < mesHoj)) return;
+      if ((novoAno - anoHoj) * 12 + (novoMes - mesHoj) > 12) return;
+
+      mesAtual = novoMes;
+      anoAtual = novoAno;
+      renderizarCalendario();
+    }
+
+    function formataDataString(dataObj) {
+      return dataObj.getFullYear() + '-' + ('0' + (dataObj.getMonth()+1)).slice(-2) + '-' + ('0' + dataObj.getDate()).slice(-2);
+    }
+
+    function isFeriado(dataStr) {
+      return dadosCliente.feriados.indexOf(dataStr) > -1;
+    }
+
+    function getPacoteEspecial(dataStr) {
+      for (var i = 0; i < dadosCliente.feriadosEspeciais.length; i++) {
+        var p = dadosCliente.feriadosEspeciais[i];
+        if (dataStr >= p.inicio && dataStr <= p.fim) {
+          return p;
+        }
+      }
+      return null;
+    }
+
+    function calcularPrecoDia(dataObj, dataStr) {
+      var hoje = new Date(); hoje.setHours(0,0,0,0);
+      var diffDias = Math.ceil((dataObj.getTime() - hoje.getTime()) / (1000 * 3600 * 24));
+      var ehFeriado = isFeriado(dataStr);
+      var diaSemana = dataObj.getDay();
+      var ehFimDeSemana = (diaSemana === 0 || diaSemana === 6);
+      var p = dadosCliente.precosTabela;
+
+      if(dadosCliente.passarDia) {
+         return diffDias < 90 ? p.umDiaMenor90 : p.umDiaMaior90;
+      } else {
+         if(ehFeriado) return p.feriado;
+         if(ehFimDeSemana) return p.fimSemana;
+         return p.diaSemana;
+      }
+    }
+
+    function atualizaAvisoSelecao(texto) {
+      document.getElementById('avisoSelecao').innerText = texto;
+    }
+
+    function renderizarCalendario() {
+      var display = document.getElementById('mesAnoDisplay');
+      var grid = document.getElementById('gridDias');
+      grid.innerHTML = '';
+
+      var nomesMeses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+      display.innerText = nomesMeses[mesAtual] + ' ' + anoAtual;
+
+      var cabecalhoDias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+      for(var i=0; i<7; i++) {
+        var divCab = document.createElement('div');
+        divCab.className = 'dia-cabecalho';
+        divCab.innerText = cabecalhoDias[i];
+        grid.appendChild(divCab);
+      }
+
+      var primeiroDia = new Date(anoAtual, mesAtual, 1).getDay();
+      var diasNoMes = new Date(anoAtual, mesAtual + 1, 0).getDate();
+      var hoje = new Date(); hoje.setHours(0,0,0,0);
+
+      for (var i = 0; i < primeiroDia; i++) grid.appendChild(document.createElement('div'));
+
+      for (var d = 1; d <= diasNoMes; d++) {
+        var dataAtual = new Date(anoAtual, mesAtual, d);
+        var dataStr = formataDataString(dataAtual);
+
+        var ocupado = dadosCliente.datasOcupadas.indexOf(dataStr) > -1;
+        var passado = dataAtual < hoje;
+        var ehFeriado = isFeriado(dataStr);
+        var pacoteEspecial = getPacoteEspecial(dataStr);
+
+        if (dadosCliente.passarDia && ehFeriado) ocupado = true;
+
+        var divDia = document.createElement('div');
+        divDia.className = 'dia-caixa';
+
+        var numeroDia = document.createElement('div');
+        numeroDia.innerText = d;
+        numeroDia.style.fontWeight = 'bold';
+
+        var precoDiv = document.createElement('div');
+        precoDiv.className = 'preco-texto';
+
+        if (passado || ocupado) {
+           divDia.style.backgroundColor = ocupado ? '#FFEBEE' : '#F5F5F5';
+           divDia.style.color = ocupado ? '#D32F2F' : '#999';
+           divDia.style.cursor = 'not-allowed';
+           precoDiv.innerText = (dadosCliente.passarDia && ehFeriado) ? 'Bloqueado' : (ocupado ? 'Ocupado' : '-');
+           precoDiv.style.color = ocupado ? '#D32F2F' : '#999';
+           if(ocupado && !(dadosCliente.passarDia && ehFeriado)) divDia.style.textDecoration = 'line-through';
+        } else if (pacoteEspecial) {
+           divDia.style.backgroundColor = '#FFF59D';
+           divDia.style.color = '#B78100';
+           divDia.style.border = '1px solid #FFC107';
+
+           if (dadosCliente.passarDia) {
+              divDia.style.cursor = 'not-allowed';
+              precoDiv.innerText = 'Indisponível';
+              precoDiv.style.fontSize = '8px';
+           } else {
+              divDia.className += ' livre';
+              divDia.style.cursor = 'pointer';
+              precoDiv.innerText = 'Pacote';
+
+              var isDentroPacoteSelecionado = (feriadoEspecialSelecionado && feriadoEspecialSelecionado.nome === pacoteEspecial.nome);
+              if (isDentroPacoteSelecionado) {
+                 divDia.style.backgroundColor = '#FFC107';
+                 divDia.style.color = '#000';
+                 precoDiv.style.color = '#000';
+                 precoDiv.innerText = 'Selecionado';
+              }
+
+              divDia.onclick = (function(dt, str) { return function() { processarCliqueDia(dt, str); } })(dataAtual, dataStr);
+           }
+        } else {
+           divDia.className += ' livre';
+           divDia.style.cursor = 'pointer';
+           precoDiv.innerText = 'R$ ' + Math.floor(calcularPrecoDia(dataAtual, dataStr));
+
+           var isSelecionado = (diaInicio && dataAtual.getTime() === diaInicio.getTime()) || (diaFim && dataAtual.getTime() === diaFim.getTime());
+           if (diaInicio && diaFim && dataAtual.getTime() > diaInicio.getTime() && dataAtual.getTime() < diaFim.getTime()) {
+               divDia.style.backgroundColor = '#C8E6C9';
+           }
+           if (isSelecionado) {
+               divDia.style.backgroundColor = 'var(--verde-principal)';
+               divDia.style.color = '#FFF';
+               precoDiv.style.color = '#FFF';
+           }
+
+           divDia.onclick = (function(dt, str) { return function() { processarCliqueDia(dt, str); } })(dataAtual, dataStr);
+        }
+
+        divDia.appendChild(numeroDia);
+        divDia.appendChild(precoDiv);
+        grid.appendChild(divDia);
+      }
+    }
+
+    function processarCliqueDia(dataObj, dataStr) {
+       var btnCalc = document.getElementById('btnCalcularOrcamento');
+       avisoFimDeSemanaAtivado = false;
+       var pacoteEspecial = getPacoteEspecial(dataStr);
+
+       if (pacoteEspecial) {
+           if (feriadoEspecialSelecionado && feriadoEspecialSelecionado.nome === pacoteEspecial.nome) {
+               diaInicio = null; diaFim = null; feriadoEspecialSelecionado = null; valorTotalSelecionado = 0;
+               btnCalc.disabled = true; btnCalc.style.backgroundColor = "";
+               atualizaAvisoSelecao("Seleção de pacote cancelada. Escolha uma nova data.");
+               renderizarCalendario();
+               return;
+           }
+
+           var dInPacote = new Date(pacoteEspecial.inicio + "T12:00:00");
+           var dOutPacote = new Date(pacoteEspecial.fim + "T12:00:00");
+
+           var temp = new Date(dInPacote);
+           var conflitoOcupado = false;
+           while(temp <= dOutPacote) {
+               if (dadosCliente.datasOcupadas.indexOf(formataDataString(temp)) > -1) {
+                   conflitoOcupado = true; break;
+               }
+               temp.setDate(temp.getDate() + 1);
+           }
+
+           if (conflitoOcupado) {
+               atualizaAvisoSelecao("Desculpe, uma ou mais datas deste pacote já estão ocupadas no calendário.");
+               return;
+           }
+
+           diaInicio = dInPacote;
+           diaFim = dOutPacote;
+           feriadoEspecialSelecionado = pacoteEspecial;
+           valorTotalSelecionado = parseFloat(pacoteEspecial.preco);
+
+           atualizaAvisoSelecao("O Período selecionado possui pacote fechado para feriado especial. Para alterar a quantidade de dias, consulte o gerente Afonso.");
+           btnCalc.disabled = false; btnCalc.style.backgroundColor = "#2E7D32";
+           renderizarCalendario();
+           return;
+       }
+
+       if (feriadoEspecialSelecionado) {
+           feriadoEspecialSelecionado = null;
+           diaInicio = null; diaFim = null; valorTotalSelecionado = 0;
+       }
+
+       if (dadosCliente.passarDia) {
+          diaInicio = dataObj; diaFim = dataObj;
+          valorTotalSelecionado = calcularPrecoDia(dataObj, dataStr);
+          atualizaAvisoSelecao("Dia selecionado! Pode calcular.");
+          btnCalc.disabled = false; btnCalc.style.backgroundColor = "#2E7D32";
+       } else {
+          if (!diaInicio || (diaInicio && diaFim)) {
+
+             if (dataObj.getDay() === 6) {
+                 var prevFri = new Date(dataObj); prevFri.setDate(prevFri.getDate() - 1);
+                 var nextMon = new Date(dataObj); nextMon.setDate(nextMon.getDate() + 2);
+                 if (isFeriado(formataDataString(prevFri))) {
+                     atualizaAvisoSelecao("Feriado na Sexta: O pacote exige entrada na Sexta-feira (ou antes)."); return;
+                 }
+                 if (isFeriado(formataDataString(nextMon))) {
+                     atualizaAvisoSelecao("Feriado na Segunda: O pacote exige entrada na Sexta-feira (ou antes)."); return;
+                 }
+             }
+
+             diaInicio = dataObj; diaFim = null; valorTotalSelecionado = 0;
+             btnCalc.disabled = true; btnCalc.style.backgroundColor = "";
+             atualizaAvisoSelecao("Check-in selecionado. Agora clique no Check-out (saída).");
+
+          } else if (dataObj > diaInicio) {
+
+             if (dataObj.getDay() === 6) {
+                 var aSexta = new Date(dataObj); aSexta.setDate(aSexta.getDate() - 1);
+                 if (isFeriado(formataDataString(aSexta))) {
+                     atualizaAvisoSelecao("Feriado na Sexta: A saída deve ser no Domingo (ou depois)."); return;
+                 }
+             }
+
+             if (dataObj.getDay() === 6 || dataObj.getDay() === 0) {
+                 var difToMon = dataObj.getDay() === 6 ? 2 : 1;
+                 var aSegunda = new Date(dataObj); aSegunda.setDate(aSegunda.getDate() + difToMon);
+                 if (isFeriado(formataDataString(aSegunda))) {
+                     atualizaAvisoSelecao("Feriado na Segunda: A saída deve ser na Segunda-feira (ou depois)."); return;
+                 }
+             }
+
+             diaFim = dataObj;
+             calcularRangeDiarias(diaInicio, diaFim);
+          } else {
+             atualizaAvisoSelecao("Erro: O Check-out deve ser DEPOIS do Check-in.");
+          }
+       }
+       renderizarCalendario();
+    }
+
+    function calcularRangeDiarias(inicio, fim) {
+       valorTotalSelecionado = 0;
+       var atual = new Date(inicio);
+       atual.setDate(atual.getDate() + 1);
+       var diffDias = Math.ceil((fim.getTime() - inicio.getTime()) / (1000 * 3600 * 24));
+
+       while(atual <= fim) {
+          var dataStr = formataDataString(atual);
+
+          if(dadosCliente.datasOcupadas.indexOf(dataStr) > -1) {
+             alert("Atenção: Existe um dia ocupado no meio do período. Escolha outras datas.");
+             diaInicio = null; diaFim = null; valorTotalSelecionado = 0;
+             atualizaAvisoSelecao("Seleção cancelada devido a data ocupada."); return;
+          }
+
+          if(getPacoteEspecial(dataStr)) {
+             alert("Você não pode incluir dias de um pacote fechado em uma reserva comum. Por favor, ajuste as datas.");
+             diaInicio = null; diaFim = null; valorTotalSelecionado = 0;
+             atualizaAvisoSelecao("Seleção cancelada devido a conflito com Feriado Especial."); return;
+          }
+
+          valorTotalSelecionado += calcularPrecoDia(atual, dataStr);
+          atual.setDate(atual.getDate() + 1);
+       }
+
+       var dIn = inicio.getDay();
+       if (diffDias === 1 && (dIn === 5 || dIn === 6 || dIn === 0)) {
+           valorTotalSelecionado = dadosCliente.precosTabela.fimSemana * 2;
+           avisoFimDeSemanaAtivado = true;
+       }
+
+       atualizaAvisoSelecao("Período selecionado com sucesso! Pode gerar o orçamento.");
+       var btnCalc = document.getElementById('btnCalcularOrcamento');
+       btnCalc.disabled = false; btnCalc.style.backgroundColor = "#2E7D32";
+    }
+
+    function calcularTotalFinal() {
+      document.getElementById('tela2').classList.remove('ativa');
+      document.getElementById('tela3').classList.add('ativa');
+
+      document.getElementById('valorTotal').innerText = "R$ " + valorTotalSelecionado.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+
+      var dInTela = ('0'+diaInicio.getDate()).slice(-2) + "/" + ('0'+(diaInicio.getMonth()+1)).slice(-2);
+      var dOutTela = diaFim ? (('0'+diaFim.getDate()).slice(-2) + "/" + ('0'+(diaFim.getMonth()+1)).slice(-2)) : dInTela;
+
+      var textoResumo = "Reserva para " + dadosCliente.pessoas + " pessoas. \nPeríodo: " + dInTela + " até " + dOutTela;
+      if (feriadoEspecialSelecionado) {
+          textoResumo = "Pacote: " + feriadoEspecialSelecionado.nome + "\n" + textoResumo;
+      }
+      document.getElementById('resumoReserva').innerText = textoResumo;
+
+      var extra = document.getElementById('avisoExtraResumo');
+      if (avisoFimDeSemanaAtivado && !feriadoEspecialSelecionado) {
+          extra.innerText = "*(Cobrança de pacote mínimo de fim de semana aplicada)*";
+          extra.style.display = "block";
+      } else {
+          extra.style.display = "none";
+      }
+
+      dadosCliente.valorFinal = valorTotalSelecionado;
+
+      var dInBackend = diaInicio.getFullYear() + "-" + ('0'+(diaInicio.getMonth()+1)).slice(-2) + "-" + ('0'+diaInicio.getDate()).slice(-2);
+      var dOutBackend = diaFim ? (diaFim.getFullYear() + "-" + ('0'+(diaFim.getMonth()+1)).slice(-2) + "-" + ('0'+diaFim.getDate()).slice(-2)) : dInBackend;
+
+      apiPost('atualizarContatoFinal', {
+        linha: dadosCliente.linhaPlanilha,
+        dataEntrada: dInBackend,
+        dataSaida: dOutBackend,
+        valor: valorTotalSelecionado
+      });
+    }
+
+    function enviarWhatsAppReserva() {
+      var num = "5527999218056";
+
+      var dInWpp = ('0'+diaInicio.getDate()).slice(-2) + "/" + ('0'+(diaInicio.getMonth()+1)).slice(-2) + "/" + diaInicio.getFullYear();
+      var dOutWpp = diaFim ? (('0'+diaFim.getDate()).slice(-2) + "/" + ('0'+(diaFim.getMonth()+1)).slice(-2) + "/" + diaFim.getFullYear()) : dInWpp;
+
+      var pacoteMsg = feriadoEspecialSelecionado ? "o pacote fechado de *" + feriadoEspecialSelecionado.nome + "*, do dia " : "do dia ";
+
+      var msg = "Olá Afonso, sou o(a) *" + dadosCliente.nome + "*.\n" +
+                "Somos " + dadosCliente.pessoas + " pessoas e quero reservar " + pacoteMsg + dInWpp + " até " + dOutWpp + ".\n" +
+                "O orçamento deu R$ " + dadosCliente.valorFinal.toLocaleString('pt-BR', {minimumFractionDigits: 2}) + ".";
+
+      window.open("https://wa.me/" + num + "?text=" + encodeURIComponent(msg), "_blank");
+    }
+
+    function mostrarMensagemVisita() {
+      var caixa = document.getElementById('caixaVisita');
+      caixa.style.display = (caixa.style.display === 'block') ? 'none' : 'block';
+    }
+
+    function voltarInicio() {
+      document.getElementById('tela2').classList.remove('ativa');
+      document.getElementById('tela3').classList.remove('ativa');
+      document.getElementById('tela1').classList.add('ativa');
+      diaInicio = null; diaFim = null; feriadoEspecialSelecionado = null;
+      document.getElementById('btnCalcularOrcamento').disabled = true;
+      document.getElementById('btnCalcularOrcamento').style.backgroundColor = "";
+      document.getElementById('caixaVisita').style.display = 'none';
+    }
+
+    // Registra o service worker (permite instalar o site como app / abrir mais rápido)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('sw.js').catch(function(e){ console.log('SW falhou:', e); });
+      });
+    }
+  </script>
+</body>
+</html>
