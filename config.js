@@ -3,4 +3,4 @@
 // (o "Google" vai te dar um link parecido com:
 //  https://script.google.com/macros/s/AKfycb........./exec )
 // ======================================================================
-const API_URL = "COLE_AQUI_O_LINK_DO_SEU_APPS_SCRIPT";
+const API_URL = "https://script.google.com/macros/s/AKfycbyVsPtviHTaOxJgn_VpaHeplgAiWO6eCNLT5X5tloHC9JjfG_ZvhNC8FxYMw1oV5-4-/exec";
