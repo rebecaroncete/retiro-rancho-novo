@@ -171,7 +171,13 @@
         <label for="passarDia">É apenas para passar o dia (sem pernoite)?</label>
       </div>
 
+      <div class="checkbox-container">
+        <input type="checkbox" id="casamento" onchange="mostrarHorarios(this)">
+        <label for="casamento">É para casamento?</label>
+      </div>
+
       <div id="avisoHorario" class="aviso" style="display: none;"><strong>Horário:</strong> Check-in às 08h e Check-out às 20h. (Indisponível em feriados)</div>
+      <div id="avisoCasamento" class="aviso" style="display: none;"><strong>Casamento:</strong> a reserva é sempre de sexta às 17h até domingo às 17h (2 diárias). Para casamentos em feriados ou fora do fim de semana, fale com o gerente Afonso.</div>
       <div id="avisoPernoite" class="aviso"><strong>Horário Padrão:</strong> Check-in às 17h e Check-out às 17h. Mínimo de 2 diárias aos finais de semana.</div>
 
       <button id="btnAvancar" onclick="irParaCalendario()">Ver Calendário e Preços</button>
@@ -264,10 +270,15 @@
       input.value = v;
     }
 
-    function mostrarHorarios() {
-      var passarDia = document.getElementById('passarDia').checked;
+    function mostrarHorarios(origem) {
+      var cxDia = document.getElementById('passarDia');
+      var cxCas = document.getElementById('casamento');
+      if (origem === cxCas && cxCas.checked) cxDia.checked = false;
+      if (origem !== cxCas && cxDia.checked) cxCas.checked = false;
+      var passarDia = cxDia.checked, casamento = cxCas.checked;
       document.getElementById('avisoHorario').style.display = passarDia ? 'block' : 'none';
-      document.getElementById('avisoPernoite').style.display = passarDia ? 'none' : 'block';
+      document.getElementById('avisoCasamento').style.display = casamento ? 'block' : 'none';
+      document.getElementById('avisoPernoite').style.display = (passarDia || casamento) ? 'none' : 'block';
     }
 
     function mostrarErro(idCaixa, mensagem) {
@@ -290,6 +301,8 @@
         var qtdCriancas = parseInt(document.getElementById('criancas').value, 10) || 0;
 
         dadosCliente.passarDia = document.getElementById('passarDia').checked;
+        dadosCliente.casamento = document.getElementById('casamento').checked;
+        if (dadosCliente.casamento) dadosCliente.passarDia = false;
 
         if(!dadosCliente.nome || !dadosCliente.whatsapp || isNaN(qtdAdultos)) {
           mostrarErro('mensagemErroTela1', "Preencha Nome, WhatsApp e a quantidade de Adultos."); return;
@@ -316,7 +329,7 @@
         document.getElementById('btnCalcularOrcamento').disabled = true;
 
         apiPost('salvarContatoInicial', {
-          nome: dadosCliente.nome,
+          nome: dadosCliente.nome + (dadosCliente.casamento ? ' (casamento)' : ''),
           whatsapp: dadosCliente.whatsapp,
           qtdPessoas: dadosCliente.pessoas,
           passarOdia: dadosCliente.passarDia ? "Sim" : "Não"
@@ -467,7 +480,7 @@
            divDia.style.color = '#B78100';
            divDia.style.border = '1px solid #FFC107';
 
-           if (dadosCliente.passarDia) {
+           if (dadosCliente.passarDia || dadosCliente.casamento) {
               divDia.style.cursor = 'not-allowed';
               precoDiv.innerText = 'Indisponível';
               precoDiv.style.fontSize = '8px';
@@ -486,6 +499,12 @@
 
               divDia.onclick = (function(dt, str) { return function() { processarCliqueDia(dt, str); } })(dataAtual, dataStr);
            }
+        } else if (dadosCliente.casamento && [0, 5, 6].indexOf(dataAtual.getDay()) === -1) {
+           divDia.style.backgroundColor = '#F5F5F5';
+           divDia.style.color = '#999';
+           divDia.style.cursor = 'pointer';
+           precoDiv.innerText = '-';
+           divDia.onclick = (function(dt, str) { return function() { processarCliqueDia(dt, str); } })(dataAtual, dataStr);
         } else {
            divDia.className += ' livre';
            divDia.style.cursor = 'pointer';
@@ -514,6 +533,12 @@
        var btnCalc = document.getElementById('btnCalcularOrcamento');
        avisoFimDeSemanaAtivado = false;
        var pacoteEspecial = getPacoteEspecial(dataStr);
+
+       if (dadosCliente.casamento) {
+           selecionarFimDeSemanaCasamento(dataObj);
+           renderizarCalendario();
+           return;
+       }
 
        if (pacoteEspecial) {
            if (feriadoEspecialSelecionado && feriadoEspecialSelecionado.nome === pacoteEspecial.nome) {
@@ -606,6 +631,39 @@
        renderizarCalendario();
     }
 
+    function selecionarFimDeSemanaCasamento(dataObj) {
+       var btnCalc = document.getElementById('btnCalcularOrcamento');
+       var contatoAfonso = " Para casamentos em feriados ou fora do fim de semana, fale com o gerente Afonso: (27) 99921-8056.";
+       diaInicio = null; diaFim = null; valorTotalSelecionado = 0; feriadoEspecialSelecionado = null;
+       btnCalc.disabled = true; btnCalc.style.backgroundColor = "";
+
+       var ds = dataObj.getDay();
+       if (ds !== 5 && ds !== 6 && ds !== 0) {
+           atualizaAvisoSelecao("Casamentos são de sexta às 17h até domingo às 17h." + contatoAfonso); return;
+       }
+       var sexta = new Date(dataObj); sexta.setDate(sexta.getDate() - (ds === 5 ? 0 : (ds === 6 ? 1 : 2)));
+       var sabado = new Date(sexta); sabado.setDate(sabado.getDate() + 1);
+       var domingo = new Date(sexta); domingo.setDate(domingo.getDate() + 2);
+       var segunda = new Date(sexta); segunda.setDate(segunda.getDate() + 3);
+       var hoje = new Date(); hoje.setHours(0,0,0,0);
+       if (sexta < hoje) { atualizaAvisoSelecao("A sexta-feira desse fim de semana já passou. Escolha outro fim de semana."); return; }
+
+       var dias = [sexta, sabado, domingo];
+       for (var i = 0; i < dias.length; i++) {
+           if (dadosCliente.datasOcupadas.indexOf(formataDataString(dias[i])) > -1) {
+               atualizaAvisoSelecao("Esse fim de semana já está ocupado. Escolha outro fim de semana."); return;
+           }
+       }
+       var comFeriado = [sexta, sabado, domingo, segunda].some(function(d) { return isFeriado(formataDataString(d)); }) ||
+                        dias.some(function(d) { return getPacoteEspecial(formataDataString(d)); });
+       if (comFeriado) { atualizaAvisoSelecao("Esse fim de semana tem feriado." + contatoAfonso); return; }
+
+       diaInicio = sexta; diaFim = domingo;
+       valorTotalSelecionado = calcularPrecoDia(sabado, formataDataString(sabado)) + calcularPrecoDia(domingo, formataDataString(domingo));
+       atualizaAvisoSelecao("Fim de semana selecionado: sexta 17h até domingo 17h. Pode gerar o orçamento.");
+       btnCalc.disabled = false; btnCalc.style.backgroundColor = "#2E7D32";
+    }
+
     function calcularRangeDiarias(inicio, fim) {
        valorTotalSelecionado = 0;
        var atual = new Date(inicio);
@@ -655,6 +713,9 @@
       if (feriadoEspecialSelecionado) {
           textoResumo = "Pacote: " + feriadoEspecialSelecionado.nome + "\n" + textoResumo;
       }
+      if (dadosCliente.casamento) {
+          textoResumo = "Casamento (sexta 17h a domingo 17h)\n" + textoResumo;
+      }
       document.getElementById('resumoReserva').innerText = textoResumo;
 
       var extra = document.getElementById('avisoExtraResumo');
@@ -684,7 +745,8 @@
       var dInWpp = ('0'+diaInicio.getDate()).slice(-2) + "/" + ('0'+(diaInicio.getMonth()+1)).slice(-2) + "/" + diaInicio.getFullYear();
       var dOutWpp = diaFim ? (('0'+diaFim.getDate()).slice(-2) + "/" + ('0'+(diaFim.getMonth()+1)).slice(-2) + "/" + diaFim.getFullYear()) : dInWpp;
 
-      var pacoteMsg = feriadoEspecialSelecionado ? "o pacote fechado de *" + feriadoEspecialSelecionado.nome + "*, do dia " : "do dia ";
+      var pacoteMsg = feriadoEspecialSelecionado ? "o pacote fechado de *" + feriadoEspecialSelecionado.nome + "*, do dia " :
+                      (dadosCliente.casamento ? "para um *casamento*, do dia " : "do dia ");
 
       var msg = "Olá Afonso, sou o(a) *" + dadosCliente.nome + "*.\n" +
                 "Somos " + dadosCliente.pessoas + " pessoas e quero reservar " + pacoteMsg + dInWpp + " até " + dOutWpp + ".\n" +
